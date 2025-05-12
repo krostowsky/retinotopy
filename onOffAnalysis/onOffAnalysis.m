@@ -1,7 +1,5 @@
 clc; clear;
-
-addpath(genpath('/scratch/midway3/rostowsky/badsCode/bads-master'));
-addpath(genpath('/project/joelvoss/tmp-rostowsky/bosc/'));
+addpath(genpath('/project/joelvoss/tmp-rostowsky/github/retinotopy/dependencies/tfAnalysis/bosc/'));
 
 %%
 origImages = load('/project/joelvoss/code/retinotopy/workspace_retinotopyCaltsmash.mat');
