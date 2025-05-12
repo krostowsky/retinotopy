@@ -6,7 +6,7 @@ indir = '/project/joelvoss/tmp-rostowsky/hpcData';
 subjects = struct2cell(dir(indir));
 subjects = subjects(1,3:end);
 inFile = 'tfAnalysis.mat';
-for currSubject = 2:length(subjects)
+for currSubject = 1:length(subjects)
     tic;
     fprintf([subjects{currSubject} '\n']);
     load([indir '/' subjects{currSubject} '/' inFile]);
