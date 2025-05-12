@@ -6,7 +6,7 @@ indir = '/project/joelvoss/tmp-rostowsky/hpcData';
 subjects = struct2cell(dir(indir));
 subjects = subjects(1,3:end);
 inFile = 'tfAnalysis.mat';
-for currSubject = 7:length(subjects)
+for currSubject = 2:length(subjects)
     tic;
     fprintf([subjects{currSubject} '\n']);
     load([indir '/' subjects{currSubject} '/' inFile]);
@@ -142,22 +142,9 @@ for currSubject = 7:length(subjects)
     clearvars -except makeEvents onEventTimesOff onEventIndicesOff currSubject indir inFile outdir subjects hippocampalDataReref newContactList out onEventGammaData offEventGammaData gammaFreqs offMeans onEventData offEventData discharges fullDescriptionMat fullDescriptionMatLabels fullDataMat ...
         resultLabel res onEventTimes onEventIndices offEventTimes offEventIndices hippocampalImageIndData hippocampalMaskIndData
 
-    %%
+    %% make an array to hold spike data for each electrode
     timeCol = find(strcmpi(fullDescriptionMatLabels, 'time'));
     sampleFreq = abs(fullDescriptionMat(1, timeCol) - fullDescriptionMat(2, timeCol));
-    hippocampalDischargeContactInds = find(ismember(newContactList, resultLabel));
-    hippocampalDischargeContactInds = find(ismember(out.chan, hippocampalDischargeContactInds));
-    spikeTimes = out.pos(hippocampalDischargeContactInds);
-
-    % now we make an array that contains any spikes within hippocampal
-    % channels
-    spikeWindows = [];
-    for j = 1:length(spikeTimes)
-        currSpikeTime = spikeTimes(j);
-        addTimes = spikeTimes(j) - 1:sampleFreq:spikeTimes(j) + 1;
-        spikeWindows = [spikeWindows, addTimes];
-    end
-    spikeWindows = unique(round(spikeWindows,4));
 
     % this gets the total number of events
     numEvents = 0;
@@ -174,37 +161,57 @@ for currSubject = 7:length(subjects)
         numEvents = numEvents + currNumEvents;
     end
 
-    countEvent = 0;
-    checkEpilepsy = zeros(numEvents,1);
-    for j = 1:length(onEventTimes)
-        for k = 1:size(onEventTimes{j},2)
-            countEvent = countEvent + 1;
-            currTimes = onEventTimes{j}(:,k);
-            isSpikeAffected = sum(ismember(currTimes, spikeWindows));
-            if isSpikeAffected
-                checkEpilepsy(countEvent) = 1;
+    spikeArray = zeros(numEvents, size(hippocampalDataReref,1));
+
+    for currElect = 1:size(hippocampalDataReref)
+        %hippocampalDischargeContactInds = find(ismember(newContactList, resultLabel));
+        hippocampalDischargeContactInds = find(ismember(newContactList, resultLabel{currElect}));
+        hippocampalDischargeContactInds = find(ismember(out.chan, hippocampalDischargeContactInds));
+        spikeTimes = out.pos(hippocampalDischargeContactInds);
+
+        % now we make an array that contains any spikes within the current hippocampal
+        % channel
+        spikeWindows = [];
+        for j = 1:length(spikeTimes)
+            currSpikeTime = spikeTimes(j);
+            addTimes = spikeTimes(j) - 1:sampleFreq:spikeTimes(j) + 1;
+            spikeWindows = [spikeWindows, addTimes];
+        end
+        spikeWindows = unique(round(spikeWindows,4));
+
+        countEvent = 0;
+        checkEpilepsy = zeros(numEvents,1);
+        for j = 1:length(onEventTimes)
+            for k = 1:size(onEventTimes{j},2)
+                countEvent = countEvent + 1;
+                currTimes = onEventTimes{j}(:,k);
+                isSpikeAffected = sum(ismember(currTimes, spikeWindows));
+                if isSpikeAffected
+                    checkEpilepsy(countEvent) = 1;
+                end
             end
         end
-    end
-    for j = 1:length(onEventTimesOff)
-        for k = 1:size(onEventTimesOff{j},2)
-            countEvent = countEvent + 1;
-            currTimes = onEventTimesOff{j}(:,k);
-            isSpikeAffected = sum(ismember(currTimes, spikeWindows));
-            if isSpikeAffected
-                checkEpilepsy(countEvent) = 1;
+        for j = 1:length(onEventTimesOff)
+            for k = 1:size(onEventTimesOff{j},2)
+                countEvent = countEvent + 1;
+                currTimes = onEventTimesOff{j}(:,k);
+                isSpikeAffected = sum(ismember(currTimes, spikeWindows));
+                if isSpikeAffected
+                    checkEpilepsy(countEvent) = 1;
+                end
             end
         end
-    end
-    for j = 1:length(offEventTimes)
-        for k = 1:size(offEventTimes{j},2)
-            countEvent = countEvent + 1;
-            currTimes = offEventTimes{j}(:,k);
-            isSpikeAffected = sum(ismember(currTimes, spikeWindows));
-            if isSpikeAffected
-                checkEpilepsy(countEvent) = 1;
+        for j = 1:length(offEventTimes)
+            for k = 1:size(offEventTimes{j},2)
+                countEvent = countEvent + 1;
+                currTimes = offEventTimes{j}(:,k);
+                isSpikeAffected = sum(ismember(currTimes, spikeWindows));
+                if isSpikeAffected
+                    checkEpilepsy(countEvent) = 1;
+                end
             end
         end
+        spikeArray(:,currElect) = checkEpilepsy;
     end
 
     %
@@ -274,8 +281,8 @@ for currSubject = 7:length(subjects)
         addCount = addCount + length(eventBlock);
     end
 
-    descriptorMat(:, end+1) = checkEpilepsy;
-    descriptorMatLabels{end+1} = 'isSpike';
+    % descriptorMat(:, end+1) = checkEpilepsy;
+    % descriptorMatLabels{end+1} = 'isSpike';
 
     % %% find the average power of each gamma frequnecy during the off periods
     % gammaFreqs = res.freqs - 80;
@@ -465,7 +472,7 @@ for currSubject = 7:length(subjects)
     
     %%
     clearvars -except currSubject indir inFile outdir subjects hippocampalDataReref newContactList out onEventGammaData offEventGammaData gammaFreqs offMeans onEventData offEventData discharges fullDescriptionMat fullDescriptionMatLabels fullDataMat resultLabel ...
-        onEventTimes onEventIndices onEventTimesOff onEventIndicesOff offEventTimes onEventImages offEventIndices descriptorMat descriptorMatLabels descriptorMatNonSpike powerMat powerMatNonSpike averageGammaPower makeEvents
+        onEventTimes onEventIndices onEventTimesOff onEventIndicesOff offEventTimes onEventImages offEventIndices descriptorMat descriptorMatLabels descriptorMatNonSpike powerMat powerMatNonSpike averageGammaPower makeEvents spikeArray
     
     makeEvents = 1;
     if makeEvents
