@@ -2,10 +2,6 @@ clc; clear;
 addpath(genpath('/project/joelvoss/tmp-rostowsky/github/retinotopy/dependencies/tfAnalysis/bosc/'));
 
 %%
-origImages = load('/project/joelvoss/code/retinotopy/workspace_retinotopyCaltsmash.mat');
-origCircle = origImages.basiccircle(1:4:end, 1:4:end);
-
-%%
 indir = '/project/joelvoss/tmp-rostowsky/hpcData';
 subjects = struct2cell(dir(indir));
 subjects = subjects(1,3:end);
@@ -25,7 +21,7 @@ lowTheta = [1 5];
 highTheta = [5 11];
 gamma = [80, 200];
 %gammaFreqs = res.freqs - 80;
-gammaFreqs = [67:80]; % these are indices from the TFA
+gammaFreqs = [67:80]; % these are indices from the TFA, assumes tfa from 1 to 200Hz, 80 freqs, log-spaced
 
 fs = 500;
 
@@ -42,14 +38,9 @@ for j = 1:length(subjects)
 
     % load on and off data
     load([indir '/' subjects{j} '/' inFile], 'res', 'hippocampalDataReref', 'resultLabel');
-    load([indir '/' subjects{j} '/events.mat'], 'descriptorMat', 'onEventIndices', 'onEventTimes', 'offEventIndices', 'offEventTimes', 'onEventImages','out');
-    onEventIndices = cat(2, onEventIndices{:});
-    offEventIndices = cat(2, offEventIndices{:});
-    if removeSpikes
-        modMat = descriptorMat((descriptorMat(1:size(onEventIndices,2),5) == 0), :);
-        onEventIndices = onEventIndices(:,(descriptorMat(1:size(onEventIndices,2),5) == 0));
-        offEventIndices = offEventIndices(:,(descriptorMat(1:size(offEventIndices,2),5) == 0));
-    end
+    load([indir '/' subjects{j} '/events.mat'], 'descriptorMat', 'onEventIndices', 'onEventTimes', 'offEventIndices', 'offEventTimes', 'onEventImages','out', 'spikeArray');
+    totOnEventIndices = cat(2, onEventIndices{:});
+    totOffEventIndices = cat(2, offEventIndices{:});
 
     electrodePeakData = cell(size(hippocampalDataReref,1),1);
     electrodePeakDataPower = cell(size(hippocampalDataReref,1),1);
@@ -59,6 +50,15 @@ for j = 1:length(subjects)
     electrodePeakDataPeriodicPowerOff = cell(size(hippocampalDataReref,1),1);
     electrodePeakDataFreqs = cell(size(hippocampalDataReref,1),1);
     for k = 1:size(hippocampalDataReref,1)
+        if removeSpikes
+            % this is a long conditional:
+            % it finds the indices of "off" or "on", 
+            % uses those to index the spikeArray and 
+            % find where there are no spikes
+            offEventIndices = totOffEventIndices(:, (spikeArray(find(descriptorMat(:,2) == 0), 1) == 0)); 
+            onEventIndices = totOnEventIndices(:, (spikeArray(find(descriptorMat(:,2) == 1), 1) == 0));
+        end
+
         currPowerData = res.B(:,:,k);
         currOffAvg = currPowerData(:, offEventIndices(offEventIndices ~= 0)); % no need to split by event here, assuming all off data is the same
         currOffAvg = log10(nanmean(currOffAvg,2));
@@ -71,8 +71,6 @@ for j = 1:length(subjects)
             mkdir([figDir '/' subjects{j} '/fitPeaks/electrode' num2str(k) ]);
             mkdir([figDir '/' subjects{j} '/fitPeaksRatio/electrode' num2str(k) ]);
 
-            %currTotPeaks = []; % used to look at all peaks within the current electrode
-            %currTotPeaksThresh = []; % used to look at all peaks below threhsold within the current electrode
             currPeaks = res.peakFreq{k,1};
             if isempty(currPeaks) % means no oscillatory activity
                 fprintf(['No peaks for contact: ' num2str(k) ' subject: ' subjects{j} '\n']);
@@ -83,6 +81,8 @@ for j = 1:length(subjects)
             % you cannot mean across events to recover the total average, the
             % events are log10 values, meaning averaging over them will not
             % give you currOffAvg
+
+            % gives average aperiodic/periodic power for off data
             ap_guess = [nan, currOffAvg(1)];
             [ap_params, ap_ps] = robust_ap_fit(res.freqs(17:57), currOffAvg(17:57)', ap_guess);
             currOffAvgPeriodic = currOffAvg(17:57) - ap_ps';
