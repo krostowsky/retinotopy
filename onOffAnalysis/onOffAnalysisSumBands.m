@@ -35,7 +35,7 @@ removeSpikes = 1;
 plotFits = 1;
 visEventFits = 1;
 visOffFit = 1;
-for j = 3:length(subjects)
+for j = 1:length(subjects)
     if plotFits
         mkdir([figDir '/' subjects{j} '/onOffPlots']);
     end
@@ -52,6 +52,9 @@ for j = 3:length(subjects)
     electrodeOffPeriodicData = cell(size(hippocampalDataReref,1),2);
     electrodeOnPeriodicRatios = cell(size(hippocampalDataReref,1),1);
     electrodeOffPeriodicRatios = cell(size(hippocampalDataReref,1),1);
+
+    modOnStuff = cell(size(hippocampalDataReref,1),1);
+    modOffStuff = cell(size(hippocampalDataReref,1),1);
 
     % for every electrode, compare on power to average off power for each event
     apFreqs = res.freqs(apFreqsInds);
@@ -79,6 +82,11 @@ for j = 3:length(subjects)
             % find where there are no spikes
             offEventIndices = totOffEventIndices(:, (spikeArray(find(descriptorMat(:,2) == 0), k) == 0));
             onEventIndices = totOnEventIndices(:, (spikeArray(find(descriptorMat(:,2) == 1), k) == 0));
+
+            modOn = descriptorMat(descriptorMat(:,2) == 1 & spikeArray(:, k) == 0, :);
+            modOff = descriptorMat(descriptorMat(:,2) == 0 & spikeArray(:, k) == 0, :);
+            modOnStuff{k} = modOn;
+            modOffStuff{k} = modOff;
         end
 
         currPowerData = res.B(:,:,k);
@@ -169,6 +177,7 @@ for j = 3:length(subjects)
         electrodeOnPeriodicData{k,2} = currOnHtAvgPeriodic;
         electrodeOffPeriodicData{k,1} = currOffLtAvgPeriodic;
         electrodeOffPeriodicData{k,2} = currOffHtAvgPeriodic;
+
     end
 
     if computeAPPerEvent
@@ -198,6 +207,25 @@ for j = 3:length(subjects)
         end
         sgtitle('on power vs off power');
         saveas(powerOnOff,[figDir '/' subjects{j} '/onOffhist/onpowervsoffpower.png']); close();
+
+        % ratio plot
+        ratioPlot = figure; title('ratios over time'); countGraph = 0;
+        for jj = 1:length(electrodeOnPeriodicRatios)
+            ratioPlotDataLT = [nanmean(electrodeOnPeriodicRatios{jj}(ltapfreqs,:),1), nanmean(electrodeOffPeriodicRatios{jj}(ltapfreqs,:),1)];
+            ratioPlotDataHT = [nanmean(electrodeOnPeriodicRatios{jj}(htapfreqs,:),1), nanmean(electrodeOffPeriodicRatios{jj}(htapfreqs,:),1)];
+            totmod = [modOnStuff{jj}; modOffStuff{jj}];
+            [~, sortind] = sort(totmod(:,3));
+            totmod = totmod(sortind,:);
+            offStuff = find(totmod(:,2) == 0);
+            countGraph = countGraph + 1;
+            subplot(length(electrodeOnPeriodicRatios), 2, countGraph);
+            ratioPlotDataLT = ratioPlotDataLT(sortind);
+            ratioPlotDataHT = ratioPlotDataHT(sortind);
+            plot(ratioPlotDataLT); hold on; plot(offStuff, ratioPlotDataLT(offStuff), '.r');
+            countGraph = countGraph + 1;
+            subplot(length(electrodeOnPeriodicRatios), 2, countGraph);
+            plot(ratioPlotDataHT(sortind)); hold on; plot(offStuff, ratioPlotDataHT(offStuff), '.r');
+        end
     else
         error('stop');
     end
