@@ -43,10 +43,19 @@ end
 [~, i] = sort(cno);
 csc_files = csc_files(i);
 if ~exist([csc_dir filesep 'ttl_Events.nev']) && ~exist([csc_dir filesep 'Events.nev'])
-    makeTTLEvents(csc_dir, contacts, csc_files, timestamps.retinotopy.idx, csc_dir);
+    makeTTLEvents(csc_dir, contacts, csc_files, timestamps.retinotopy.idx, csc_dir, subjid);
 end
 
-ttl16File = csc_files(find(strcmpi(jacksheet.Elect,'TTL16'))).name;
+% try % have to do this because of UC014, does not have every file so the match is weird
+%     ttl16File = csc_files(find(strcmpi(jacksheet.Elect,'TTL16'))).name;
+%     if length(csc_files) ~= height(jacksheet)
+%         error('this probably won''t work');
+%     end
+% catch
+ttl16FileNumber = find(strcmpi(jacksheet.Elect,'TTL16'));
+ttl16File = ['CSC' num2str(ttl16FileNumber) '.ncs'];
+fprintf([ttl16File ': check this for TTL accuracy']);
+% end
 
 %%
 dat = [];
@@ -90,9 +99,14 @@ dat = orderfields(dat);
         [Timestamps, ~, TTLs, ~, ~, ~] =  Nlx2MatEV([csc_dir filesep ev_fname], ...
             [1 1 1 1 1], 1, 1, []);
         Timestamps = Timestamps(TTLs>0);
+
       
         if strcmpi(subjid, 'NU002') % there is no way around this hardcoding except by editing the raw data
             Timestamps = Timestamps(2:end);
+        end
+        
+        if strcmpi(subjid, 'UC012') % the timestamps for TTLs related to retinotopy are at the end
+            Timestamps = Timestamps(end-11:end);
         end
 
         if strcmpi(subjid(1:2), 'NU')
