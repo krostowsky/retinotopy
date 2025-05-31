@@ -1,7 +1,7 @@
 function [dat, outStruct, rawOnOffInds, rawOnOffId, sortedOnOffInds, sortedOnOffId, builtTimes, corruptElectrodes, sortedBlockInds, sortedRawOnOffId, sortedRawOnOffInds] = get_subj_eeg_kr(subjid, csc_dir, img_dir, behavFiles, indir, codedir, retinotopyDesc, useElectrodes, outdir)
 %GET_SUBJ_EEG loads eeg for a subject from disk
 % subjid is the subject id
-% csc_dir is the subject's directory containing the csc data 
+% csc_dir is the subject's directory containing the csc data
 % img_dir is the directory containing imaging information (electrode names)
 % behavFiles are the file names of the .mat files for each stimulus
 % indir is the base directory where data is stored
@@ -23,6 +23,8 @@ ttlInd = find(contains(contacts,'TTL'));
 
 chan_include = logical(zeros(256,1));
 chan_include([useElectrodeInd;ttlInd]) = 1;
+
+log_epoch([outdir '/logs'], 'epoch_log.txt', 1, jacksheet(chan_include,:).Elect);
 
 % durations to epoch around retinotopy blocks
 pre_dur = 2000;
@@ -46,16 +48,10 @@ if ~exist([csc_dir filesep 'ttl_Events.nev']) && ~exist([csc_dir filesep 'Events
     makeTTLEvents(csc_dir, contacts, csc_files, timestamps.retinotopy.idx, csc_dir, subjid);
 end
 
-% try % have to do this because of UC014, does not have every file so the match is weird
-%     ttl16File = csc_files(find(strcmpi(jacksheet.Elect,'TTL16'))).name;
-%     if length(csc_files) ~= height(jacksheet)
-%         error('this probably won''t work');
-%     end
-% catch
 ttl16FileNumber = find(strcmpi(jacksheet.Elect,'TTL16'));
 ttl16File = ['CSC' num2str(ttl16FileNumber) '.ncs'];
-fprintf([ttl16File ': check this for TTL accuracy']);
-% end
+
+log_epoch([outdir '/logs'], 'epoch_log.txt', 2, ttl16File);
 
 %%
 dat = [];
@@ -100,11 +96,11 @@ dat = orderfields(dat);
             [1 1 1 1 1], 1, 1, []);
         Timestamps = Timestamps(TTLs>0);
 
-      
+
         if strcmpi(subjid, 'NU002') % there is no way around this hardcoding except by editing the raw data
             Timestamps = Timestamps(2:end);
         end
-        
+
         if strcmpi(subjid, 'UC012') % the timestamps for TTLs related to retinotopy are at the end
             Timestamps = Timestamps(end-11:end);
         end
@@ -125,7 +121,7 @@ dat = orderfields(dat);
         else
             Timestamps = Timestamps(timestamps.retinotopy.idx);
         end
-        
+
         %% if the first timestamp was missed, recreate it
         if length(Timestamps) == 11
             [newTimes, ~, ~] = Nlx2MatCSC([csc_dir '/' ttl16File], ...
@@ -147,7 +143,7 @@ dat = orderfields(dat);
         rawOnOffInds = [];
         rawOnOffId = [];
         onOffInds = [];
-        onOffId = []; 
+        onOffId = [];
         onOffImages = [];
         onOffMasks = [];
         offBlockCount = 0;
@@ -160,15 +156,7 @@ dat = orderfields(dat);
         for j = 1:length(Timestamps)
             if mod(j,2) % this means only count for the odd (On) ttl
                 cellCount = cellCount + 1;
-
-                behavDataCheck = behavFiles{cellCount};
-                [checkRunStart, checkRunEnd] = regexp(behavDataCheck,'run[0-9]{2,}');
-                behavDataCheck = behavDataCheck(checkRunStart:checkRunEnd);
-                behavDataCheck = regexp(behavDataCheck,'\d*','Match');
-                behavDataCheck = str2num(behavDataCheck{1});
-                if behavDataCheck ~= cellCount
-                    error('behavioral data (trial) run does not match current count, fix this');
-                end
+                check_behavioral_count(behavFiles, cellCount)
 
                 % load behavioral data for current block
                 behavioralData = load([indir '/' subjid '/behav/retinotopy/' behavFiles{cellCount}]);
@@ -181,7 +169,7 @@ dat = orderfields(dat);
 
                 % the second row of frameorder has the mask data sequence
                 currMaskData = behavioralData.frameorder(2,:);
-                currImgData = behavioralData.frameorder(1,:);               
+                currImgData = behavioralData.frameorder(1,:);
 
                 %
                 onOffMasks = [onOffMasks, currMaskData];
@@ -194,49 +182,28 @@ dat = orderfields(dat);
                 stimOn = find(behavioralData.frameorder(2,:) ~= 0);
                 [blockBoundariesCellOn, blockBoundariesCellOnTimes] = findBlocks(stimOn, 1, behavioralData, 0, adjBehavFlag, j);
 
-                % create arrays that hold information about the stimulus
-                % across the entire experiment
-                for t = 1:length(blockBoundariesCellOn)
-                    % current indices plus, the indices of the stimulus
-                    % being on (plus the number of samples in the off
-                    % blocks that have passed, plus the length of the
-                    % previous block)
-                    onOffInds = [onOffInds, blockBoundariesCellOn{t} + offBlockCount + blockLengthCount]; 
-                    onOffId = [onOffId, ones(1, length(blockBoundariesCellOn{t}))];
-                    rawOnOffInds = [rawOnOffInds, blockBoundariesCellOn{t}];
-                    rawOnOffId = [rawOnOffId, ones(1, length(blockBoundariesCellOn{t}))];
-                    builtTimes = [builtTimes, blockBoundariesCellOnTimes{t}];
-                    blockInds = [blockInds, repmat(cellCount, [1, length(blockBoundariesCellOn{t})])];                 
-                end
-                for t = 1:length(blockBoundariesCellOff)
-                    onOffInds = [onOffInds, blockBoundariesCellOff{t} + offBlockCount + blockLengthCount];
-                    onOffId = [onOffId, zeros(1, length(blockBoundariesCellOff{t}))];
-                    rawOnOffInds = [rawOnOffInds, blockBoundariesCellOff{t}];
-                    rawOnOffId = [rawOnOffId, zeros(1, length(blockBoundariesCellOff{t}))];
-                    builtTimes = [builtTimes, blockBoundariesCellOffTimes{t}];
-                    blockInds = [blockInds, repmat(cellCount, [1, length(blockBoundariesCellOff{t})])];                 
-                end
-                    blockLengthCount = blockLengthCount + length(stimOff) + length(stimOn);
+                [onOffInds, onOffId, rawOnOffInds, rawOnOffId, builtTimes, blockInds] = block_data( ...
+                    onOffInds, onOffId, rawOnOffInds, rawOnOffId, builtTimes, blockInds, ...
+                    offBlockCount, blockLengthCount, cellCount, blockBoundariesCellOn, blockBoundariesCellOnTimes, 1);
+
+                [onOffInds, onOffId, rawOnOffInds, rawOnOffId, builtTimes, blockInds] = block_data( ...
+                    onOffInds, onOffId, rawOnOffInds, rawOnOffId, builtTimes, blockInds, ...
+                    offBlockCount, blockLengthCount, cellCount, blockBoundariesCellOff, blockBoundariesCellOffTimes, 2);
+              
+                blockLengthCount = blockLengthCount + length(stimOff) + length(stimOn);
             else
                 if j < length(Timestamps)
                     currOffLength = (abs(Timestamps(j) - Timestamps(j+1)) / 10^6);
                     refreshRate = diff(blockBoundariesCellOffTimes{1});
                     refreshRate = round(1/refreshRate(1));
                     inferredTimes = 0:1/refreshRate:(currOffLength)-(1/refreshRate);
-
-                    rawOnOffInds = [rawOnOffInds, zeros(1, length(inferredTimes))];
-                    rawOnOffId = [rawOnOffId, zeros(1, length(inferredTimes))];
-
+                    offBlockCount = offBlockCount + length(inferredTimes);
                     onOffMasks = [onOffMasks, zeros(1, length(inferredTimes))];
                     onOffImages = [onOffImages, zeros(1, length(inferredTimes))];
 
-                    offBlockCount = offBlockCount + length(inferredTimes);
-                    onOffInds = [onOffInds, length(onOffInds)+1:length(onOffInds)+length(inferredTimes)];
-                    onOffId = [onOffId, zeros(1, length(inferredTimes))];
-                    builtTimes = [builtTimes, inferredTimes];
-
-                    blockInds = [blockInds, zeros(1, length(inferredTimes))];                 
-
+                    [onOffInds, onOffId, rawOnOffInds, rawOnOffId, builtTimes, blockInds] = block_data( ...
+                        onOffInds, onOffId, rawOnOffInds, rawOnOffId, builtTimes, blockInds, ...
+                        [], [], [], inferredTimes, [], 3);
                 end
                 % plot current behavioral data
                 figure;
@@ -263,11 +230,11 @@ dat = orderfields(dat);
             end
         end
 
-        
+
         %
         [dat.(dat_name), dat.contacts, dat.csc_names, dat.sr, dat.(time_name), corruptElectrodes] = get_epoched_eeg_kr(csc_dir, timestamps.(prefix).(cond), ...
             pre_dur, post_dur, contacts, chan_include, indir, subjid, behavFiles, ttl16File);
-        
+
         builtTimes = 0:1/refreshRate:(length(builtTimes)*(1/refreshRate)) - (1/refreshRate);
         [sortedOnOffInds, sortInd] = sort(onOffInds);
         sortedOnOffId = onOffId(sortInd);
@@ -279,7 +246,7 @@ dat = orderfields(dat);
         %
         figure;
         subplot(3,1,1);
-        plot(onOffImages); 
+        plot(onOffImages);
         title('image indices');
         subplot(3,1,2);
         plot(onOffMasks);
@@ -289,7 +256,7 @@ dat = orderfields(dat);
         title('on off check');
         saveas(gcf, [outdir '/behavioralDataEndToEndOrganized.png']);
         close();
-        
+
         dataInd = find(dat.retinotopy_time >= builtTimes(1) & dat.retinotopy_time <= builtTimes(end));
         currData = squeeze(dat.retinotopy_epoched);
         currData = currData(:, dataInd);
@@ -300,66 +267,6 @@ dat = orderfields(dat);
         outStruct.('time') = currTimes;
         outStruct.('images') = onOffImages;
         outStruct.('masks') = onOffMasks;
-        
-    end
-%%
-    function [blockBoundariesCell, blockBoundariesCellTimes] = findBlocks(stimIn,isOn,behavioralData, addBuffer, adjBehavFlag, currBlock)
-        % args
-        % stimIn indices for stimulus
-        % isOn: 0 for offStimulus, 1 for onStimulus
-        % behavioralData behavioralData structure
-        % addBuffer adds a 2s buffer to each end of a block
-
-        stimDiff = diff(stimIn);
-        blockBoundaries = find(stimDiff ~= 1);
-
-
-        blockBoundariesCell = cell(length(blockBoundaries)+1,1); % +1 is experimental
-        blockBoundariesCellTimes = cell(length(blockBoundaries)+1,1);  % +1 is experimental
-
-        for k = 1:length(blockBoundariesCell)
-            if ~isOn
-                if k-1 == 0
-                    if (adjBehavFlag && currBlock == 1)
-                        blockBoundariesCell{k} = stimIn(1):stimIn(blockBoundaries(k));
-                    else
-                        blockBoundariesCell{k} = 1:stimIn(blockBoundaries(k));
-                    end
-                elseif k > length(blockBoundaries) %else if is experimental
-                     blockBoundariesCell{k} = stimIn(blockBoundaries(k-1)+1):stimIn(end); 
-                else
-                    blockBoundariesCell{k} = stimIn(blockBoundaries(k-1)+1):stimIn(blockBoundaries(k));
-                end
-            else
-                if k == length(blockBoundariesCell)
-                    blockBoundariesCell{k} = stimIn(blockBoundaries(k-1)+1):stimIn(end);
-                elseif k-1 == 0
-                    if (adjBehavFlag && currBlock == 1)
-                        blockBoundariesCell{k} = 1:stimIn(blockBoundaries(k));
-                    else
-                        blockBoundariesCell{k} = stimIn(1):stimIn(blockBoundaries(k));
-                    end
-                else
-                    blockBoundariesCell{k} = stimIn(blockBoundaries(k-1)+1):stimIn(blockBoundaries(k));
-                end
-            end
-
-        end
-
-        %% find timestamps of stim off regions and add 2s buffer
-        behavioralDataTimeFrames = behavioralData.timeframes;
-
-        for j = 1:length(blockBoundariesCell)
-            currTimeFrames = behavioralDataTimeFrames(blockBoundariesCell{j});
-            if addBuffer
-                if currTimeFrames(1) == 0
-                    currTimeFrames = [currTimeFrames(1):1/30:(currTimeFrames(end)+2)];
-                else
-                    currTimeFrames = [(currTimeFrames(1)-2):1/30:(currTimeFrames(end)+2)];
-                end
-            end
-            blockBoundariesCellTimes{j} = currTimeFrames;
-        end
 
     end
 end
