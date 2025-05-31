@@ -1,5 +1,9 @@
-function makeTTLEvents(csc_dir, contacts, csc_files, timestamps, outdir)
+function makeTTLEvents(csc_dir, contacts, csc_files, timestamps, outdir, subjid)
 ttl_idx = strcmp(contacts, 'TTL16');
+if strcmpi(subjid, 'UC014')
+    ttl_idx_orig = ttl_idx;
+    ttl_idx = find( contains({csc_files.name}', ['CSC' num2str(find(ttl_idx_orig~=0)) '.ncs']));
+end
 try
     ev_fname = 'ttl_Events.nev';
     [Timestamps, ~, TTLs, ~, ~, ~] =  Nlx2MatEV([csc_dir filesep ev_fname], ...
