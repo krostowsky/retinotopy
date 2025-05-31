@@ -48,31 +48,6 @@ if length(dateFind) ~= 1 && isempty(checkEdf)
     error('Cannot continue, no matching iEEG and behavior dates found');
 end
 
-%{
-if startsWith(subject, 'UC') || startsWith(subject, 'NU')
-
-    switch subject
-
-
-        case 'UC002'
-            sess_dir = '2023-02-07_14-16-19';
-        case 'UC003'
-            sess_dir = '2023-02-17_14-08-51';
-        case 'UC004'
-            sess_dir = '2023-04-17_12-07-23';
-        case 'UC005'
-            sess_dir = '2023-05-15_12-04-21';
-        case 'UC006'
-            sess_dir = '2023-07-19_12-13-16';
-        case 'UC007'
-            sess_dir = '2023-07-19_12-13-16';
-        case 'NU001'
-            sess_dir = ''; % need to convert from RawData to CSC files
-        case 'NU002'
-            sess_dir = '2023-07-14_01-41-52';
-    end
-%}
-
 if ~isempty(checkEdf)
     csc_dir = ['/project/joelvoss/data/' subject '/ieeg/']; 
 else
