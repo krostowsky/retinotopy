@@ -3,6 +3,8 @@ ttl_idx = strcmp(contacts, 'TTL16');
 if strcmpi(subjid, 'UC014')
     ttl_idx_orig = ttl_idx;
     ttl_idx = find( contains({csc_files.name}', ['CSC' num2str(find(ttl_idx_orig~=0)) '.ncs']));
+elseif strcmpi(subjid, 'UC016')
+    ttl_idx = 137;
 end
 try
     ev_fname = 'ttl_Events.nev';
