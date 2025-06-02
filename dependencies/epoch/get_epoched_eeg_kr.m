@@ -97,6 +97,14 @@ else
             reshapedTS = reshape(Timestamps, 4, []);
             Timestamps = [reshapedTS(2, :)'; reshapedTS(3, :)']';
         end
+        
+        if strcmpi(subjid, 'UC012') || strcmpi(subjid, 'UC016') % the timestamps for TTLs related to retinotopy are at the end
+            Timestamps = Timestamps(end-11:end);
+        end
+
+        if strcmpi(subjid, 'UC015') % the timestamps for TTLs related to retinotopy are at the end
+            Timestamps = Timestamps(end-3:end);
+        end
 
         if ~isempty(Timestamps)
             has_ev = true;
@@ -156,6 +164,15 @@ else
             reshapedTS = reshape(Timestamps, 4, []);
             Timestamps = [reshapedTS(2, :)'; reshapedTS(3, :)']';
         end
+
+        if strcmpi(subjid, 'UC012') || strcmpi(subjid, 'UC016') % the timestamps for TTLs related to retinotopy are at the end
+            Timestamps = Timestamps(end-11:end);
+        end
+
+        if strcmpi(subjid, 'UC015') % the timestamps for TTLs related to retinotopy are at the end
+            Timestamps = Timestamps(end-3:end);
+        end
+
         timestamps = Timestamps(timestamps);
     end
 end
@@ -209,6 +226,10 @@ for f = 1:length(csc_files)
         % issues
         timestamp_range_read = [timestamps(e)-TimeStampPerSample*sr*(pre_dur+2000)/1000 ...
             timestamps(e)+TimeStampPerSample*sr*(post_dur+2000)/1000];
+
+        if f == 1
+            plot_range_read(csc_dir, timestamp_range_read, [figDir '/' subjid]);
+        end
 
         timestamp_range = [timestamps(e)-TimeStampPerSample*sr*(pre_dur)/1000 ...
             timestamps(e)+TimeStampPerSample*sr*(post_dur)/1000];
@@ -321,13 +342,6 @@ for f = 1:length(csc_files)
     epoched_dat(f,:,:) = ds_dat;
 
 end
-
-%% remove corrupt channels
-%epoched_dat(logical(badChannels),:,:) = [];
-%csc_names(logical(badChannels)) = [];
-%csc_files(logical(badChannels)) = [];
-%contacts(logical(badChannels)) = [];
-%dstimval(logical(badChannels)) = [];
 
 time = ds_tim;
 sr = newSr;
