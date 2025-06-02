@@ -34,6 +34,11 @@ post_dur = 1500;
 % contains this information
 timestamps = get_condition_info_kr(subjid);
 
+% this subject didn't finish the entire procedure
+if strcmpi(subjid, 'UC015') 
+    timestamps.retinotopy.idx = 1:4;
+end
+
 %%
 csc_files = dir([csc_dir filesep '*.ncs']);
 
@@ -48,10 +53,11 @@ if ~exist([csc_dir filesep 'ttl_Events.nev']) && ~exist([csc_dir filesep 'Events
     makeTTLEvents(csc_dir, contacts, csc_files, timestamps.retinotopy.idx, csc_dir, subjid);
 end
 
-ttl16FileNumber = find(strcmpi(jacksheet.Elect,'TTL16'));
-ttl16File = ['CSC' num2str(ttl16FileNumber) '.ncs'];
-
-log_epoch([outdir '/logs'], 'epoch_log.txt', 2, ttl16File);
+if strcmpi(subjid, 'UC008') % add || conditions for any subject with 11 TTLs instead of 12, might need to change ttl16File if CSC225 isnt it
+    ttl16File = ['CSC225.ncs'];
+else
+    ttl16File = [];
+end
 
 %%
 dat = [];
@@ -101,8 +107,12 @@ dat = orderfields(dat);
             Timestamps = Timestamps(2:end);
         end
 
-        if strcmpi(subjid, 'UC012') % the timestamps for TTLs related to retinotopy are at the end
+        if strcmpi(subjid, 'UC012') || strcmpi(subjid, 'UC016') % the timestamps for TTLs related to retinotopy are at the end
             Timestamps = Timestamps(end-11:end);
+        end
+
+        if strcmpi(subjid, 'UC015') % the timestamps for TTLs related to retinotopy are at the end
+            Timestamps = Timestamps(end-3:end);
         end
 
         if strcmpi(subjid(1:2), 'NU')
@@ -118,6 +128,8 @@ dat = orderfields(dat);
                 elementCount = elementCount + 2;
             end
             Timestamps = newTS;
+        elseif strcmpi(subjid, 'UC015')
+            Timestamps = Timestamps(1:4);
         else
             Timestamps = Timestamps(timestamps.retinotopy.idx);
         end
