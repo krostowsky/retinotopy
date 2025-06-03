@@ -1,5 +1,6 @@
 clc; clear;
 addpath(genpath('/project/joelvoss/tmp-rostowsky/github/retinotopy/dependencies/tfAnalysis/bosc/'));
+addpath(genpath('/project/joelvoss/tmp-rostowsky/github/retinotopy'));
 
 %%
 indir = '/project/joelvoss/tmp-rostowsky/hpcData';
@@ -35,6 +36,7 @@ removeSpikes = 1;
 plotFits = 1;
 visEventFits = 1;
 visOffFit = 1;
+subjectPStats = cell(length(subjects),5); % col 1 raw, col 2 periodic, col 3 raw direction, col 4 periodic direction, col 5 are the contacts 
 for j = 1:length(subjects)
     if plotFits
         mkdir([figDir '/' subjects{j} '/onOffPlots']);
@@ -50,8 +52,10 @@ for j = 1:length(subjects)
     electrodeOffRawData = cell(size(hippocampalDataReref,1),2);
     electrodeOnPeriodicData = cell(size(hippocampalDataReref,1),2);
     electrodeOffPeriodicData = cell(size(hippocampalDataReref,1),2);
-    electrodeOnPeriodicRatios = cell(size(hippocampalDataReref,1),1);
-    electrodeOffPeriodicRatios = cell(size(hippocampalDataReref,1),1);
+    electrodeOnPeriodicRatiosLT = cell(size(hippocampalDataReref,1),1);
+    electrodeOnPeriodicRatiosHT = cell(size(hippocampalDataReref,1),1);
+    electrodeOffPeriodicRatiosLT = cell(size(hippocampalDataReref,1),1);
+    electrodeOffPeriodicRatiosHT = cell(size(hippocampalDataReref,1),1);
 
     modOnStuff = cell(size(hippocampalDataReref,1),1);
     modOffStuff = cell(size(hippocampalDataReref,1),1);
@@ -101,6 +105,9 @@ for j = 1:length(subjects)
         ap_guess = [nan, currOffAvg(1), 0]; % I fit the full off spectrum with a knee
         [ap_params, ap_ps] = robust_ap_fit(res.freqs(1:57), currOffAvg(1:57)', ap_guess);
         currOffAvgPeriodic = currOffAvg(1:57) - ap_ps'; % this is the average off periodic power across all off data
+        currOffAvgPeriodicAPF = currOffAvgPeriodic(apFreqsInds);
+        currOffAvgPeriodicLT = nanmean(currOffAvgPeriodicAPF(ltapfreqs));
+        currOffAvgPeriodicHT = nanmean(currOffAvgPeriodicAPF(htapfreqs));
 
         % while it is possible to perform a 1/f fit for lower frequency
         % data, I choose not to so as to not create differences between
@@ -108,7 +115,7 @@ for j = 1:length(subjects)
         if visOffFit
             totOffFit = figure('visible', 'off'); plot(res.freqs, currOffAvg); hold on; plot(res.freqs(1:57), ap_ps); title('1/f fit over all off data');
             axes('position', [.6 .6 .3 .3]);
-            box on; plot(res.freqs(1:40), currOffAvg(1:40)); hold on; plot(res.freqs(1:40), ap_ps(1:40)); 
+            box on; plot(res.freqs(1:40), currOffAvg(1:40)); hold on; plot(res.freqs(1:40), ap_ps(1:40));
             legend('power spectrum','1/f fit');
             saveas(totOffFit, [figDir '/' subjects{j} '/onOffPlots/electrode-' num2str(k) '/totOffFit.png']); close();
         end
@@ -128,15 +135,16 @@ for j = 1:length(subjects)
             if visEventFits
                 eventFit = figure('visible','off'); plot(apFreqs, currPs); hold on; plot(apFreqs, ap_ps); title(['1/f fit for off event: ' num2str(i)]);
                 axes('position', [.6 .6 .3 .3]);
-                box on; plot(apFreqs(1:30), currPs(1:30)); hold on; plot(apFreqs(1:30), ap_ps(1:30)); 
+                box on; plot(apFreqs(1:30), currPs(1:30)); hold on; plot(apFreqs(1:30), ap_ps(1:30));
                 legend('power spectrum','1/f fit');
                 saveas(eventFit, [figDir '/' subjects{j} '/onOffPlots/electrode-' num2str(k) '/events/offEvent-' num2str(i) '-fit.png']); close();
             end
             currOffDataEventsPeriodic(:,i) = currOffDataEvents(:,i) - ap_ps';
         end
-        electrodeOffPeriodicRatios{k,1} = currOffDataEventsPeriodic ./ currOffAvgPeriodic(apFreqsInds);
+        electrodeOffPeriodicRatiosLT{k,1} = nanmean(currOffDataEventsPeriodic(ltapfreqs,:),1) ./ currOffAvgPeriodicLT;
+        electrodeOffPeriodicRatiosHT{k,1} = nanmean(currOffDataEventsPeriodic(htapfreqs,:),1) ./ currOffAvgPeriodicHT;
 
-        % for each on event, find peak freqs
+        % for each on event fit power spectrum
         currOnDataEvents = zeros(length(apFreqs), size(onEventIndices,2)); % raw log10 power
         currOnDataEventsPeriodic = zeros(length(apFreqs), size(onEventIndices,2)); % periodic power (raw log10 power - log10 aperiodic power)
         parfor i = 1:size(onEventIndices,2)
@@ -151,12 +159,13 @@ for j = 1:length(subjects)
             if visEventFits
                 eventFit = figure('visible','off'); plot(apFreqs, currPs); hold on; plot(apFreqs, ap_ps);
                 axes('position', [.6 .6 .3 .3]);
-                box on; plot(apFreqs(1:30), currPs(1:30)); hold on; plot(apFreqs(1:30), ap_ps(1:30)); 
+                box on; plot(apFreqs(1:30), currPs(1:30)); hold on; plot(apFreqs(1:30), ap_ps(1:30));
                 saveas(eventFit, [figDir '/' subjects{j} '/onOffPlots/electrode-' num2str(k) '/events/onEvent-' num2str(i) '-fit.png']); close();
             end
             currOnDataEventsPeriodic(:,i) = currOnDataEvents(:,i) - ap_ps';
         end
-        electrodeOnPeriodicRatios{k,1} = currOnDataEventsPeriodic ./ currOffAvgPeriodic(apFreqsInds);
+        electrodeOnPeriodicRatiosLT{k,1} = nanmean(currOnDataEventsPeriodic(ltapfreqs,:),1) ./ currOffAvgPeriodicLT;
+        electrodeOnPeriodicRatiosHT{k,1} = nanmean(currOnDataEventsPeriodic(htapfreqs,:),1) ./ currOffAvgPeriodicHT;
 
         currOffLtAvg = nanmean(currOffDataEvents(ltapfreqs,:),1);
         currOffHtAvg = nanmean(currOffDataEvents(htapfreqs,:),1);
@@ -183,7 +192,7 @@ for j = 1:length(subjects)
     if computeAPPerEvent
         mkdir([figDir '/' subjects{j} '/onOffhist']);
         % electrodeOnPeriodicData : electrodeOffPeriodicData
-        periodicPower = figure;  countGraph = 0;
+        periodicPower = figure('visible', 'off');  countGraph = 0;
         for jj = 1:length(electrodeOnPeriodicData)
             [~, edges] = histcounts([[electrodeOnPeriodicData{jj,1}], [electrodeOffPeriodicData{jj,1}]]);
             countGraph = countGraph + 1;
@@ -196,7 +205,7 @@ for j = 1:length(subjects)
         saveas(periodicPower,[figDir '/' subjects{j} '/onOffhist/periodicPowerOnOff.png']); close();
 
         % electrodeOnRawData : electrodeOffRawData
-        powerOnOff = figure; title('on power to off power'); countGraph = 0;
+        powerOnOff = figure('visible', 'off'); title('on power to off power'); countGraph = 0;
         for jj = 1:length(electrodeOnRawData)
             [~, edges] = histcounts([[electrodeOnRawData{jj,1}], [electrodeOffRawData{jj,1}]]);
             countGraph = countGraph + 1;
@@ -208,25 +217,69 @@ for j = 1:length(subjects)
         sgtitle('on power vs off power');
         saveas(powerOnOff,[figDir '/' subjects{j} '/onOffhist/onpowervsoffpower.png']); close();
 
-        % ratio plot
-        ratioPlot = figure; title('ratios over time'); countGraph = 0;
-        for jj = 1:length(electrodeOnPeriodicRatios)
-            ratioPlotDataLT = [nanmean(electrodeOnPeriodicRatios{jj}(ltapfreqs,:),1), nanmean(electrodeOffPeriodicRatios{jj}(ltapfreqs,:),1)];
-            ratioPlotDataHT = [nanmean(electrodeOnPeriodicRatios{jj}(htapfreqs,:),1), nanmean(electrodeOffPeriodicRatios{jj}(htapfreqs,:),1)];
-            totmod = [modOnStuff{jj}; modOffStuff{jj}];
-            [~, sortind] = sort(totmod(:,3));
-            totmod = totmod(sortind,:);
-            offStuff = find(totmod(:,2) == 0);
-            countGraph = countGraph + 1;
-            subplot(length(electrodeOnPeriodicRatios), 2, countGraph);
-            ratioPlotDataLT = ratioPlotDataLT(sortind);
-            ratioPlotDataHT = ratioPlotDataHT(sortind);
-            plot(ratioPlotDataLT); hold on; plot(offStuff, ratioPlotDataLT(offStuff), '.r');
-            countGraph = countGraph + 1;
-            subplot(length(electrodeOnPeriodicRatios), 2, countGraph);
-            plot(ratioPlotDataHT(sortind)); hold on; plot(offStuff, ratioPlotDataHT(offStuff), '.r');
-        end
+        % % ratio plot
+        % ratioPlot = figure; title('ratios over time'); countGraph = 0;
+        % for jj = 1:length(electrodeOnPeriodicRatiosLT)
+        %     ratioPlotDataLT = [(electrodeOnPeriodicRatiosLT{jj}), (electrodeOffPeriodicRatiosLT{jj})];
+        %     ratioPlotDataHT = [(electrodeOnPeriodicRatiosHT{jj}), (electrodeOffPeriodicRatiosHT{jj})];
+        %     totmod = [modOnStuff{jj}; modOffStuff{jj}];
+        %     [~, sortind] = sort(totmod(:,3));
+        %     totmod = totmod(sortind,:);
+        %     offStuff = find(totmod(:,2) == 0);
+        %     countGraph = countGraph + 1;
+        %     subplot(length(electrodeOnPeriodicRatiosLT), 2, countGraph);
+        %     ratioPlotDataLT = ratioPlotDataLT(sortind);
+        %     ratioPlotDataHT = ratioPlotDataHT(sortind);
+        %     plot(ratioPlotDataLT); hold on; plot(offStuff, ratioPlotDataLT(offStuff), '.r');
+        %     countGraph = countGraph + 1;
+        %     subplot(length(electrodeOnPeriodicRatiosLT), 2, countGraph);
+        %     plot(ratioPlotDataHT(sortind)); hold on; plot(offStuff, ratioPlotDataHT(offStuff), '.r');
+        % end
     else
         error('stop');
     end
+
+    % statistical tests
+    electrodePeriodicDataPVal = nan(size(hippocampalDataReref,1),2);
+    electrodePeriodicDataDirection = nan(size(hippocampalDataReref,1),2);
+    electrodeRawDataPVal = nan(size(hippocampalDataReref,1),2);
+    electrodeRawDataDirection = nan(size(hippocampalDataReref,1),2);
+    numIt = 10000;
+    for jj = 1:size(electrodeOnPeriodicData, 1)
+        for kk = 1:size(electrodeOnPeriodicData, 2)
+            currTestVec = zeros(1, numIt);
+            currObsMeanDiff = mean(electrodeOnPeriodicData{jj,kk}) - mean(electrodeOffPeriodicData{jj,kk});
+            labelVec = [ones(1, length(electrodeOnPeriodicData{jj,kk})), zeros(1, length(electrodeOffPeriodicData{jj,kk}))];
+            dataVec = [electrodeOnPeriodicData{jj,kk} , electrodeOffPeriodicData{jj,kk}];
+            for ii = 1:numIt
+                [testMean, ~] = permutationTest(dataVec, labelVec);
+                currTestVec(ii) = testMean;
+            end
+            computedP = (1 + sum(abs(currTestVec) >= abs(currObsMeanDiff))) / (1 + numIt);
+            electrodePeriodicDataPVal(jj, kk) = computedP;
+            electrodePeriodicDataDirection(jj, kk) = currObsMeanDiff;
+        end
+    end
+    for jj = 1:size(electrodeOnRawData, 1)
+        for kk = 1:size(electrodeOnRawData, 2)
+            currTestVec = zeros(1, numIt);
+            currObsMeanDiff = mean(electrodeOnRawData{jj,kk}) - mean(electrodeOffRawData{jj,kk});
+            labelVec = [ones(1, length(electrodeOnRawData{jj,kk})), zeros(1, length(electrodeOffRawData{jj,kk}))];
+            dataVec = [electrodeOnRawData{jj,kk}, electrodeOffRawData{jj,kk}];
+            for ii = 1:numIt
+                [testMean, ~] = permutationTest(dataVec, labelVec);
+                currTestVec(ii) = testMean;
+            end
+            computedP = (1 + sum(abs(currTestVec) >= abs(currObsMeanDiff))) / (1 + numIt);
+            electrodeRawDataPVal(jj, kk) = computedP;
+            electrodeRawDataDirection(jj, kk) = currObsMeanDiff;
+        end
+    end
+    subjectPStats{j,1} = electrodeRawDataPVal;
+    subjectPStats{j,2} = electrodePeriodicDataPVal;
+    subjectPStats{j,3} = electrodeRawDataDirection;
+    subjectPStats{j,4} = electrodePeriodicDataDirection;
+    subjectPStats{j,5} = resultLabel;
 end
+
+save('statsOut/onOffStats-12-subjects.mat','subjectPStats', 'subjects');
