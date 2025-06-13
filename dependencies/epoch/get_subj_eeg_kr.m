@@ -53,7 +53,7 @@ if ~exist([csc_dir filesep 'ttl_Events.nev']) && ~exist([csc_dir filesep 'Events
     makeTTLEvents(csc_dir, contacts, csc_files, timestamps.retinotopy.idx, csc_dir, subjid);
 end
 
-if strcmpi(subjid, 'UC008') % add || conditions for any subject with 11 TTLs instead of 12, might need to change ttl16File if CSC225 isnt it
+if strcmpi(subjid, 'UC008') || strcmpi(subjid, 'UC004') || strcmpi(subjid, 'UC007') % add || conditions for any subject with 11 TTLs instead of 12, might need to change ttl16File if CSC225 isnt it
     ttl16File = ['CSC225.ncs'];
 else
     ttl16File = [];
@@ -147,7 +147,7 @@ dat = orderfields(dat);
         end
 
         %% plot the TTLs & save figure
-        figure; plot(Timestamps, 'o'); title(['TTLs for ' subjid]);
+        figure('visible', 'off'); plot(Timestamps, 'o'); title(['TTLs for ' subjid]);
         saveas(gcf, [outdir '/' 'TTLsPlotted.png']);
         close();
 
@@ -218,7 +218,7 @@ dat = orderfields(dat);
                         [], [], [], inferredTimes, [], 3);
                 end
                 % plot current behavioral data
-                figure;
+                figure('visible', 'off'); 
                 subplot(2,1,1);
                 plot(behavioralData.frameorder(1,:));
                 title('image indices');
@@ -256,7 +256,7 @@ dat = orderfields(dat);
         sortedRawOnOffInds = rawOnOffInds(sortInd);
 
         %
-        figure;
+        figure('visible', 'off');
         subplot(3,1,1);
         plot(onOffImages);
         title('image indices');
