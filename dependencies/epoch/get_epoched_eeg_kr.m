@@ -3,7 +3,9 @@ function [epoched_dat, contacts, csc_names, sr, time, badChannels] = get_epoched
 
 %GET_EPOCHED_EEG
 figDir = '/project/joelvoss/tmp-rostowsky/hpcDataFigs';
-mkdir([figDir '/' subjid]);
+if ~exist([figDir '/' subjid])
+    mkdir([figDir '/' subjid]);
+end
 
 if ~exist('chan_idx','var')
     chan_idx = true(size(contacts));
@@ -259,7 +261,7 @@ for f = 1:length(csc_files)
         fftLine = abs(fft(Samples_ev) / length(Samples_ev));
         f_orig = linspace(0, sr, length(tmpSamples(:)));
         [~, minInd] = min(abs(f_orig - 250));
-        figure; hold on; subplot(3,1,1); plot(f_orig(1:minInd), fftTmp(1:minInd)); title('Original spectrum'); xlabel('Frequency (Hz)'); ylabel('Magnitude');
+        figure('visible', 'off'); hold on; subplot(3,1,1); plot(f_orig(1:minInd), fftTmp(1:minInd)); title('Original spectrum'); xlabel('Frequency (Hz)'); ylabel('Magnitude');
         subplot(3,1,2); plot(f_orig(1:minInd), fftLine(1:minInd)); title('Line noise filtered spectrum'); xlabel('Frequency (Hz)'); ylabel('Magnitude');
         
         clear tmpSamples
