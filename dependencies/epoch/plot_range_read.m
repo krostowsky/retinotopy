@@ -21,7 +21,7 @@ end
 [~, mi1] = min(abs(stamps - timestamp_range_read(1)));
 [~, mi2] = min(abs(stamps - timestamp_range_read(2)));
 
-figure; hold on; plot(Samples(:)); plot(mi1, 1000, '*r'); plot(mi2, 1000, '*r'); title('activity of recording being analyzed - plotted against TTL');
+figure('visible', 'off'); hold on; plot(Samples(:)); plot(mi1, 1000, '*r'); plot(mi2, 1000, '*r'); title('activity of recording being analyzed - plotted against TTL');
 saveas(gcf, [outdir '/rangeReadVisualized.png']);
 close();
 
