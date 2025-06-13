@@ -34,6 +34,7 @@ retinotopyImages = load(pathToImages);
 
 % find data and image directory for subject, load MNI
 [csc_dir, img_dir] = get_dirs_kr(indir, subject);
+log_epoch([outdir '/logs'], 'epoch_log.txt', 0, {csc_dir; behavFiles})
 
 % loads depth electrode labels
 findDepthElectrodes = readtable([img_dir '/' subject '_mni.csv']).channel;
