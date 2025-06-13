@@ -23,6 +23,7 @@ for j = 1:length(tmpElectrodes)
     uniqueElectrodes{j,2} = matchingIndices;
     calcFind = calcFind + length(matchingIndices);
 end
+log_rereference([indir2 '/logs'], 'rereference_log.txt', 0, {num2str(calcFind), uniqueElectrodes});
 
 %% check for oddities (these suggest the _mni.csv and jackbox file labels are not on the same page in terms of label usage)
 %removeEmpty = 0;
@@ -40,6 +41,7 @@ for j = 1:length(tmpSortCriteria)
 end
 [~,sortInd] = sort(tmpSortCriteria);
 uniqueElectrodes = uniqueElectrodes(sortInd,:);
+log_rereference([indir2 '/logs'], 'rereference_log.txt', 1, {uniqueElectrodes});
 
 %% 
 corruptElect = uniqueElectrodes;
@@ -77,13 +79,13 @@ if corruptCountTotal ~= 0
             %currInds = corruptElect{j,2};
             corruptName = uniqueElectrodes{j,1};
             uniqueElectrodes(j,:) = [];
-            corruptContactInds = find(contains(findDepthElectrodes, corruptElect{j}));
+            corruptContactInds = find(contains(findDepthElectrodes, corruptElect{j,1}));
             findDepthElectrodes(corruptContactInds) = [];
             outStruct.('data')(corruptContactInds,:) = [];
             datCell.contacts(corruptContactInds) = [];
             datCell.csc_names(corruptContactInds) = [];
             datCell.retinotopy_epoched(corruptContactInds,:,:) = [];
-            fprintf(['REMOVED ' corruptName '\n']); 
+            log_rereference([indir2 '/logs'], 'rereference_log.txt', 3, corruptName);
         else
             continue;
         end
@@ -92,6 +94,9 @@ if corruptCountTotal ~= 0
         % currElect(toDelete) = [];        
         % uniqueElectrodes{j,2} = currElect;
     end
+    
+else
+    log_rereference([indir2 '/logs'], 'rereference_log.txt', 2, []);
 end
 
 %% rereference
