@@ -1,11 +1,14 @@
 clc; clear;
 addpath(genpath('/project/joelvoss/tmp-rostowsky/bosc/'));
+addpath(genpath('/project/joelvoss/tmp-rostowsky/github/retinotopy'));
 
 %%
 indir = '/project/joelvoss/tmp-rostowsky/hpcData';
 subjects = struct2cell(dir(indir));
 subjects = subjects(1,3:end);
 inFile = 'tfAnalysis.mat';
+
+%%
 for currSubject = 1:length(subjects)
     tic;
     fprintf([subjects{currSubject} '\n']);
@@ -446,10 +449,8 @@ for currSubject = 1:length(subjects)
     onEventImages = cell(size(onEventIndices));
     for j = 1:length(onEventImages)
         currIndices = onEventIndices{j};
-        %currIndices = currIndices(currIndices ~= 0);
         currBlockMasks = zeros(size(maskStimuli,1), size(maskStimuli,2), size(currIndices, 2));
         parfor jj = 1:size(currIndices, 2)
-            % currMaskInds = hippocampalMaskIndData(currIndices(:, jj));
             currMaskInds = currIndices(:, jj);
             currMaskInds = currMaskInds(currMaskInds ~= 0);
             currMaskInds = hippocampalMaskIndData(currMaskInds);
