@@ -32,7 +32,7 @@ end
 
 %% step 1
 % align data
-for j = 6:length(subjects)
+for j = 1:length(subjects)
     epochData(subjects{j}, indir, [outdir '/' subjects{j}], codedir, pathToImages);
 end
 
@@ -60,7 +60,7 @@ end
 %% step 2
 parfor j = 1:length(subjects)
     rereferenceElectrodes([subjectDir '/' subjects{j}]);
-end
+end 
 
 %% detect spikes, don't remove yet
 parfor j = 1:length(subjects)
