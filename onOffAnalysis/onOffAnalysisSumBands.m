@@ -11,7 +11,7 @@ inFile = 'tfAnalysis.mat';
 subjectData = struct();
 subjectData.('subject') = cell(length(subjects),1);
 
-figDir = '/project/joelvoss/tmp-rostowsky/hpcDataFigs-test';
+figDir = '/project/joelvoss/tmp-rostowsky/hpcDataFigs';
 
 computeAPPerEvent = 1;
 
@@ -32,9 +32,9 @@ spikeProportionThreshold = 0.6;
 
 %%
 removeSpikes = 1;
-plotFits = 0;
-visEventFits = 0;
-visOffFit = 0;
+plotFits = 1;
+visEventFits = 1;
+visOffFit = 1;
 subjectPStats = cell(length(subjects), 7); % col 1 raw, col 2 periodic, col 3 raw direction, col 4 periodic direction, col 5 gamma results, col 6 gamma direction, col 7 are the contacts 
 
 for j = 1:length(subjects)
@@ -343,7 +343,7 @@ for j = 1:length(subjects)
     end
     for jj = 1:size(electrodeOnRawData, 1)
         for kk = 1:size(electrodeOnRawData, 2)
-            if isempty(electrodeOnGammaData{jj,kk})
+            if isempty(electrodeOnRawData{jj,kk})
                 continue;
             end
             currTestVec = zeros(1, numIt);
@@ -369,4 +369,4 @@ for j = 1:length(subjects)
     save([indir '/' subjects{j} '/periodicData.mat'], 'electrodeOnPeriodicData', 'electrodeOffPeriodicData', 'electrodeOnPeriodicDataOff', 'electrodeOnRawData', 'electrodeOnRawDataOff', 'electrodeOffRawData', 'resultLabel', 'modOnStuff', 'modOffStuff', 'modOnStuffOff', 'electrodeOnGammaData', 'electrodeOffGammaData', 'electrodeOnGammaDataOff');
 end
 
-save('statsOut/onOffStats-12-subjects-test.mat','subjectPStats', 'subjects');
+save('statsOut/onOffStats-12-subjects.mat','subjectPStats', 'subjects');
