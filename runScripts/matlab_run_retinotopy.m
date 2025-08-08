@@ -77,4 +77,12 @@ parfor j = 1:length(subjects)
     tfAnalysis_jk_kr(subjectDir, subjects{j});
 end
 
+%% clean up files
+
 %%
+% createEvents.m
+% computeLR_weighted()
+% onOffAnalysisSumBands()
+% LR_events()
+% css_LR() or css_All() / fit_prf_all
+% fit_prf
