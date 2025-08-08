@@ -1,27 +1,10 @@
 function extractHpcData(indir, subjId)
 indir2 = indir;
 addpath(genpath(pwd));
-%load([indir2 '/rereferencedData.mat' ], '-regexp', '^(?!outdir$|indir$|subjId$)...');
 load([indir2 '/rereferencedDataSpikeRemoved.mat' ], '-regexp', '^(?!outdir$|indir$|subjId$)...');
 
 addpath(genpath('/scratch/midway3/rostowsky/'));
 addpath(genpath('/project/joelvoss/tmp-rostowsky'));
-
-%%
-% pathToMNIVol = [img_dir '/mri/wmrt1.nii'];
-% pathToAtlas = '/project/joelvoss/tmp-rostowsky/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz';
-% pathToAtlasVol = '/software/fsl-6.0.7.3-el8-x86_64/data/standard/MNI152_T1_2mm_brain.nii.gz';
-% pathToElectrodeCoords = [img_dir '/' subjId '_mni.csv'];
-% pathToAtlasTable = '/project/joelvoss/tmp-rostowsky/Glasser_2016_Table.xlsx';
-% inLabel = 'Hippocampus';
-
-%% finds electrodes within a given atlas' hippocampus label
-% resultLabel = localizeElectrodes2([img_dir '/mri/wmrt1.nii'], ...
-%     '/project/joelvoss/tmp-rostowsky/HCP-MMP1_on_MNI152_ICBM2009a_nlin_hd.nii.gz', ...
-%     '/software/fsl-6.0.7.3-el8-x86_64/data/standard/MNI152_T1_2mm_brain.nii.gz', ...
-%     [img_dir '/' subjId '_mni.csv'], ...
-%     '/project/joelvoss/tmp-rostowsky/Glasser_2016_Table.xlsx', ...
-%     'Hippocampus', outdir);
 
 %%
 resultLabel = matchSubjectToHpcElectrodes(subjId);
